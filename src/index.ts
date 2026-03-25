@@ -52,6 +52,37 @@ async function main() {
       res.json({ status: 'ok', service: 'up360-mcp', version: '1.0.0', tools: 15 });
     });
 
+    // ============ REST API for direct tool calls (used by UP360 backend) ============
+    // List all tools
+    app.get('/api/tools', (_req: any, res: any) => {
+      const tools = Object.entries((server as any)._registeredTools).map(([name, t]: [string, any]) => ({
+        name,
+        description: t.description,
+      }));
+      res.json({ tools });
+    });
+
+    // Call a tool by name — args passed as JSON body
+    app.post('/api/tools/:name', async (req: any, res: any) => {
+      const toolName = req.params.name;
+      const tool = (server as any)._registeredTools[toolName];
+      if (!tool) {
+        return res.status(404).json({ error: `Tool not found: ${toolName}` });
+      }
+      try {
+        const args = req.body || {};
+        // Call handler directly — it receives (parsedArgs, extra)
+        const result = await tool.handler(args, {} as any);
+        // Extract the text content from MCP response format
+        const text = result?.content?.[0]?.text;
+        const data = text ? JSON.parse(text) : result;
+        res.json({ tool: toolName, data, executedAt: new Date().toISOString() });
+      } catch (error: any) {
+        console.error(`REST tool error: ${toolName}`, error.message);
+        res.status(500).json({ error: error.message, tool: toolName });
+      }
+    });
+
     // MCP endpoint
     app.post('/mcp', async (req: any, res: any) => {
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined as any });
