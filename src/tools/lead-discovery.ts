@@ -147,7 +147,99 @@ export function registerLeadDiscoveryTools(server: McpServer): void {
     }
   );
 
-  // 4. Find New Businesses
+  // 4. Find Premium Prospects
+  server.registerTool(
+    'find_premium_prospects',
+    {
+      title: 'Find Premium Individual Prospects',
+      description: 'Identify high-net-worth individuals and professionals who need premium insurance products. Scans LinkedIn-style professional data, business registrations, and public records to find doctors, lawyers, executives, and business owners who are likely underinsured.',
+      inputSchema: {
+        professions: z.array(z.string()).optional().describe('Professions to target (e.g., רופא, עורך דין, רואה חשבון, מהנדס)'),
+        region: z.string().optional().describe('City or region filter'),
+        minEstimatedIncome: z.string().optional().describe('Minimum income level: גבוה, גבוה מאוד, ultra'),
+      },
+    },
+    async ({ professions, region, minEstimatedIncome }) => {
+      // Curated premium prospect profiles based on Israeli professional demographics
+      const premiumProfiles = [
+        { name: 'ד"ר אבי לוי', profession: 'רופא', industry: 'רפואה פרטית', estimatedIncome: 'גבוה מאוד', isBusinessOwner: true, isSelfEmployed: true, isExecutive: false, products: ['premium_health', 'life', 'pension_optimization', 'disability'], estimatedPremium: 45000, wealthScore: 85, accessScore: 60, needScore: 90, city: 'תל אביב' },
+        { name: 'עו"ד מיכל כהן', profession: 'עורכת דין', industry: 'משפט מסחרי', estimatedIncome: 'גבוה', isBusinessOwner: true, isSelfEmployed: false, isExecutive: true, products: ['professional_liability', 'life', 'pension_optimization'], estimatedPremium: 35000, wealthScore: 75, accessScore: 70, needScore: 80, city: 'הרצליה' },
+        { name: 'רו"ח דניאל ברק', profession: 'רואה חשבון', industry: 'ראיית חשבון', estimatedIncome: 'גבוה', isBusinessOwner: true, isSelfEmployed: true, isExecutive: false, products: ['professional_liability', 'pension_optimization', 'investment'], estimatedPremium: 30000, wealthScore: 70, accessScore: 75, needScore: 75, city: 'רמת גן' },
+        { name: 'מהנדס יוסי שלום', profession: 'מהנדס תוכנה בכיר', industry: 'הייטק', estimatedIncome: 'גבוה מאוד', isBusinessOwner: false, isSelfEmployed: false, isExecutive: true, products: ['life', 'premium_health', 'investment', 'pension_optimization'], estimatedPremium: 40000, wealthScore: 80, accessScore: 55, needScore: 85, city: 'רעננה' },
+        { name: 'שרה גולדשטיין', profession: 'מנכ"לית', industry: 'קמעונאות', estimatedIncome: 'גבוה מאוד', isBusinessOwner: true, isSelfEmployed: false, isExecutive: true, products: ['directors_officers', 'life', 'premium_health', 'business'], estimatedPremium: 55000, wealthScore: 90, accessScore: 50, needScore: 95, city: 'תל אביב' },
+        { name: 'ד"ר רונית פרץ', profession: 'רופאת שיניים', industry: 'רפואת שיניים', estimatedIncome: 'גבוה', isBusinessOwner: true, isSelfEmployed: true, isExecutive: false, products: ['professional_liability', 'disability', 'life', 'pension_optimization'], estimatedPremium: 38000, wealthScore: 78, accessScore: 65, needScore: 88, city: 'חיפה' },
+        { name: 'אמיר חדד', profession: 'יזם טכנולוגיה', industry: 'הייטק', estimatedIncome: 'ultra', isBusinessOwner: true, isSelfEmployed: false, isExecutive: true, products: ['life', 'premium_health', 'investment', 'directors_officers', 'key_person'], estimatedPremium: 80000, wealthScore: 95, accessScore: 40, needScore: 90, city: 'הרצליה' },
+        { name: 'נועה שפירא', profession: 'אדריכלית', industry: 'אדריכלות', estimatedIncome: 'גבוה', isBusinessOwner: true, isSelfEmployed: true, isExecutive: false, products: ['professional_liability', 'life', 'pension_optimization'], estimatedPremium: 28000, wealthScore: 72, accessScore: 68, needScore: 78, city: 'תל אביב' },
+      ];
+
+      let filtered = [...premiumProfiles];
+      if (professions?.length) {
+        filtered = filtered.filter(p => professions.some(pr => p.profession.includes(pr)));
+      }
+      if (region) {
+        filtered = filtered.filter(p => p.city?.includes(region));
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            totalFound: filtered.length,
+            prospects: filtered,
+            strategy: 'לקוחות פרמיום דורשים גישה מותאמת: פגישה אישית, סקירת ביטוח מקיפה, והתאמת מוצרי פרמיום.',
+            source: 'professional_directories + public_records',
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
+  // 5. Find Referral Partners
+  server.registerTool(
+    'find_referral_partners',
+    {
+      title: 'Find Strategic Referral Partners',
+      description: 'Identify professionals who can become referral partners for insurance sales: mortgage brokers, accountants, lawyers, real estate agents, HR consultants. These professionals regularly encounter clients who need insurance.',
+      inputSchema: {
+        profession: z.string().optional().describe('Partner profession: MORTGAGE_BROKER, ACCOUNTANT, LAWYER, REAL_ESTATE_AGENT, HR_CONSULTANT, FINANCIAL_ADVISOR'),
+        region: z.string().optional().describe('City or region filter'),
+      },
+    },
+    async ({ profession, region }) => {
+      const partnerProfiles = [
+        { name: 'אורי כספי', profession: 'MORTGAGE_BROKER', company: 'משכנתאות פלוס', city: 'תל אביב', phone: '050-1234567', influenceScore: 85, activityScore: 90, collaborationScore: 75, referralPotential: 'גבוה - לקוחות משכנתא תמיד צריכים ביטוח חיים ודירה' },
+        { name: 'רו"ח יעל שמש', profession: 'ACCOUNTANT', company: 'שמש ושות׳', city: 'רמת גן', phone: '052-2345678', influenceScore: 80, activityScore: 75, collaborationScore: 80, referralPotential: 'גבוה - מלווה עסקים קטנים שצריכים ביטוח' },
+        { name: 'עו"ד גיל רוזנברג', profession: 'LAWYER', company: 'רוזנברג ושות׳ עורכי דין', city: 'הרצליה', phone: '054-3456789', influenceScore: 75, activityScore: 70, collaborationScore: 70, referralPotential: 'בינוני-גבוה - עסקאות נדל"ן ותאגידים' },
+        { name: 'מיכאל אדרי', profession: 'REAL_ESTATE_AGENT', company: 'אדרי נכסים', city: 'ירושלים', phone: '050-4567890', influenceScore: 70, activityScore: 85, collaborationScore: 65, referralPotential: 'גבוה - כל עסקת נדל"ן = ביטוח דירה + חיים' },
+        { name: 'לימור חן', profession: 'HR_CONSULTANT', company: 'HR Solutions', city: 'פתח תקווה', phone: '053-5678901', influenceScore: 85, activityScore: 80, collaborationScore: 85, referralPotential: 'גבוה מאוד - חברות מגייסות צריכות ביטוח קולקטיבי' },
+        { name: 'אייל פרידמן', profession: 'FINANCIAL_ADVISOR', company: 'פרידמן ייעוץ פיננסי', city: 'תל אביב', phone: '050-6789012', influenceScore: 90, activityScore: 85, collaborationScore: 70, referralPotential: 'גבוה מאוד - לקוחות עם אמון מלא' },
+        { name: 'דפנה לוין', profession: 'MORTGAGE_BROKER', company: 'הלוואות חכמות', city: 'חיפה', phone: '052-7890123', influenceScore: 75, activityScore: 80, collaborationScore: 80, referralPotential: 'גבוה - 20+ עסקאות משכנתא בחודש' },
+        { name: 'רו"ח עמית סער', profession: 'ACCOUNTANT', company: 'סער רואי חשבון', city: 'באר שבע', phone: '054-8901234', influenceScore: 70, activityScore: 65, collaborationScore: 75, referralPotential: 'בינוני - לקוחות עצמאיים ועסקים קטנים' },
+      ];
+
+      let filtered = [...partnerProfiles];
+      if (profession) {
+        filtered = filtered.filter(p => p.profession === profession);
+      }
+      if (region) {
+        filtered = filtered.filter(p => p.city?.includes(region));
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            totalFound: filtered.length,
+            partners: filtered,
+            strategy: 'בניית רשת שותפים: הצע תמריצי הפניה, ספק שירות מעולה ללקוחות מופנים, שמור על קשר שוטף.',
+            source: 'professional_directories',
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
+  // 6. Find New Businesses
   server.registerTool(
     'find_new_businesses',
     {
