@@ -4,7 +4,7 @@
   "description": "MCP server for Israeli insurance intelligence - business data, insurance market, lead discovery, enrichment",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup src/index.ts --format cjs --target node20 --outDir dist --clean",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts"
   },
@@ -18,6 +18,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.1",
     "typescript": "^5.4.0"
   }
 }
